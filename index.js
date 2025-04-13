@@ -1,3 +1,4 @@
+const mongoose = require('mongoose')
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -5,6 +6,22 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use(express.static('build'));
+
+
+// const password = process.argv[2]
+const url = `mongodb+srv://seb:Bonjour@cluster0.bdkako1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+
+mongoose.set('strictQuery',false)
+mongoose.connect(url)
+
+const phoneBookSchema = new mongoose.Schema({
+    id: Number,
+    name: String,
+    number: String,
+})
+const Phonebook = mongoose.model('Phonebook', phoneBookSchema)
 
 // Custom token to log POST request bodies
 morgan.token('body', (req) => {
@@ -29,6 +46,7 @@ let persons = [
     { id: 4, name: "Mary Poppendieck", number: "39-23-6423122" }
 ];
 
+
 // GET Home
 app.get("/", (req, res) => {
     res.send("<h1>Hello from backend</h1>");
@@ -43,6 +61,11 @@ app.get("/info", (req, res) => {
 
 // GET all persons
 app.get('/api/persons', (req, res) => {
+    Phonebook.find({}).then(result => {
+        result.forEach(person => {
+            persons = persons.concat(person);
+        })
+      })
     res.json(persons);
 });
 
@@ -81,11 +104,18 @@ app.post('/api/persons', (req, res) => {
     // Generate a new ID as the max ID + 1
     const newId = Math.max(...persons.map(person => person.id)) + 1;
 
-    const newPerson = {
+    const newPerson = new Phonebook({
         id: newId,
         name: body.name,
         number: body.number
-    };
+    })
+
+    // adding a new user and phone 
+
+      newPerson.save().then(result => {
+        console.log('new person saved!')
+      //   mongoose.connection.close()
+      })
 
     // Add the new person to the array
     persons = persons.concat(newPerson);
@@ -97,3 +127,6 @@ const PORT = 3001;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+
+
