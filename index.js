@@ -16,10 +16,21 @@ const url = `mongodb+srv://seb:Bonjour@cluster0.bdkako1.mongodb.net/?retryWrites
 mongoose.set('strictQuery',false)
 mongoose.connect(url)
 
-const phoneBookSchema = new mongoose.Schema({
+/*const phoneBookSchema = new mongoose.Schema({
     id: Number,
     name: String,
     number: String,
+})*/
+const phoneBookSchema = new mongoose.Schema({
+    id: Number,
+    name: {    
+        type: String,    
+        minLength: 3,    
+        required: true  },
+        number:{
+            type:String,
+            required:true
+            }
 })
 const Phonebook = mongoose.model('Phonebook', phoneBookSchema)
 
@@ -38,6 +49,16 @@ const requestLogger = (req, res, next) => {
     console.log("---")
     next()
 }
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+//   
+    if (error.name === 'CastError') {
+      return response.status(400).send({ error: 'malformatted id' })
+    } else if (error.name === 'ValidationError') {    return response.status(400).json({ error: error.message })  }
+  
+    next(error)
+  }
 
 let persons = [
     { id: 1, name: "Arto Hellas", number: "040-123456" },
@@ -61,12 +82,14 @@ app.get("/info", (req, res) => {
 
 // GET all persons
 app.get('/api/persons', (req, res) => {
-    Phonebook.find({}).then(result => {
-        result.forEach(person => {
-            persons = persons.concat(person);
-        })
-      })
-    res.json(persons);
+  Phonebook.find({})
+    .then(persons => {
+      res.json(persons);
+    })
+    .catch(error => {
+      console.error("Error fetching persons:", error);
+      res.status(500).json({ error: 'Server error while fetching persons' });
+    });
 });
 
 // GET person by id
